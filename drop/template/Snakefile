@@ -72,28 +72,17 @@ rule dependencyGraph:
 rule publish_local:
     shell: "rsync -Ort {config[htmlOutputPath]} {config[webDir]}"
 
-rule prepFasta_fa:
-    priority: 1
-    input:
-        "{path_to_ref}.fa"
-    output:
-        dict = "{path_to_ref}.dict" ,
-        fai = "{path_to_ref}.fa.fai"
-    shell:
-        """
-        samtools faidx {input} -o {output.fai}
-        gatk CreateSequenceDictionary -R {input} -O {output.dict}
-        """
-
-rule prepFasta_fasta:
-    priority: 1
-    input:
-        "{path_to_ref}.fasta"
-    output:
-        dict = "{path_to_ref}.dict" ,
-        fai = "{path_to_ref}.fasta.fai"
-    shell:
-        """
-        samtools faidx {input} -o {output.fai}
-        gatk CreateSequenceDictionary -R {input} -O {output.dict}
-        """
+rule create_dict:
+    input:  cfg.genome.getFastaList()
+    output:  cfg.genome.getDictList()
+    shell: 
+	    """
+		for fasta in {input}
+		  do
+		  if [ ! -f "${{fasta%.*}}.dict" ]; then
+		    echo "${{fasta%.*}}.dict"
+		    samtools faidx $fasta -o $fasta.fai
+		    gatk CreateSequenceDictionary --REFERENCE $fasta -O ${{fasta%.*}}.dict
+                  fi
+		done
+		"""
